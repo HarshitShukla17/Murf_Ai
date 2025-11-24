@@ -1,4 +1,6 @@
 import logging
+import json
+from dataclasses import dataclass, field, asdict
 
 from dotenv import load_dotenv
 from livekit.agents import (
@@ -12,8 +14,8 @@ from livekit.agents import (
     cli,
     metrics,
     tokenize,
-    # function_tool,
-    # RunContext
+    function_tool,
+    RunContext,
 )
 from livekit.plugins import murf, silero, google, deepgram, noise_cancellation
 from livekit.plugins.turn_detector.multilingual import MultilingualModel
@@ -23,14 +25,64 @@ logger = logging.getLogger("agent")
 load_dotenv(".env.local")
 
 
+@dataclass
+class CoffeeOrder:
+    """Coffee order state"""
+
+    drinkType: str | None = None
+    size: str | None = None
+    milk: str | None = None
+    extras: list[str] = field(default_factory=list)
+    name: str | None = None
+
+
 class Assistant(Agent):
     def __init__(self) -> None:
         super().__init__(
-            instructions="""You are a helpful voice AI assistant. The user is interacting with you via voice, even if you perceive the conversation as text.
-            You eagerly assist users with their questions by providing information from your extensive knowledge.
-            Your responses are concise, to the point, and without any complex formatting or punctuation including emojis, asterisks, or other symbols.
-            You are curious, friendly, and have a sense of humor.""",
+            instructions="""You are a friendly barista at Murf Coffee Shop taking voice orders.
+            Ask for: drink type, size, milk type, extras, and customer name.
+            Use the tools to record each answer. Thank them by name when done.""",
         )
+
+    @function_tool
+    async def record_drink(self, context: RunContext[CoffeeOrder], drink: str) -> str:
+        """Record drink type"""
+        context.userdata.drinkType = drink
+        return self._check_complete(context)
+
+    @function_tool
+    async def record_size(self, context: RunContext[CoffeeOrder], size: str) -> str:
+        """Record size"""
+        context.userdata.size = size
+        return self._check_complete(context)
+
+    @function_tool
+    async def record_milk(self, context: RunContext[CoffeeOrder], milk: str) -> str:
+        """Record milk type"""
+        context.userdata.milk = milk
+        return self._check_complete(context)
+
+    @function_tool
+    async def record_extras(self, context: RunContext[CoffeeOrder], extras: str) -> str:
+        """Record extras"""
+        if extras.lower() != "none":
+            context.userdata.extras = [e.strip() for e in extras.split(",")]
+        return self._check_complete(context)
+
+    @function_tool
+    async def record_name(self, context: RunContext[CoffeeOrder], name: str) -> str:
+        """Record customer name"""
+        context.userdata.name = name
+        return self._check_complete(context)
+
+    def _check_complete(self, context: RunContext[CoffeeOrder]) -> str:
+        order = context.userdata
+        if all([order.drinkType, order.size, order.milk, order.name]):
+            with open("orders.json", "a") as f:
+                json.dump(asdict(order), f)
+                f.write("\n")
+            return f"Perfect! Your {order.size} {order.drinkType} with {order.milk} is ready. Thank you, {order.name}!"
+        return "Got it!"
 
     # To add tools, use the @function_tool decorator.
     # Here's an example that adds a simple weather tool.
@@ -62,23 +114,24 @@ async def entrypoint(ctx: JobContext):
     }
 
     # Set up a voice AI pipeline using OpenAI, Cartesia, AssemblyAI, and the LiveKit turn detector
-    session = AgentSession(
+    session = AgentSession[CoffeeOrder](
+        userdata=CoffeeOrder(),
         # Speech-to-text (STT) is your agent's ears, turning the user's speech into text that the LLM can understand
         # See all available models at https://docs.livekit.io/agents/models/stt/
         stt=deepgram.STT(model="nova-3"),
         # A Large Language Model (LLM) is your agent's brain, processing user input and generating a response
         # See all available models at https://docs.livekit.io/agents/models/llm/
         llm=google.LLM(
-                model="gemini-2.5-flash",
-            ),
+            model="gemini-2.5-flash",
+        ),
         # Text-to-speech (TTS) is your agent's voice, turning the LLM's text into speech that the user can hear
         # See all available models as well as voice selections at https://docs.livekit.io/agents/models/tts/
         tts=murf.TTS(
-                voice="en-US-matthew", 
-                style="Conversation",
-                tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
-                text_pacing=True
-            ),
+            voice="en-US-matthew",
+            style="Conversation",
+            tokenizer=tokenize.basic.SentenceTokenizer(min_sentence_len=2),
+            text_pacing=True,
+        ),
         # VAD and turn detection are used to determine when the user is speaking and when the agent should respond
         # See more at https://docs.livekit.io/agents/build/turns
         turn_detection=MultilingualModel(),
