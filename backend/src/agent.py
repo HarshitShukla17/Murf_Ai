@@ -26,80 +26,147 @@ load_dotenv(".env.local")
 
 
 @dataclass
-class CoffeeOrder:
-    """Coffee order state"""
+class WellnessCheckIn:
+    """Wellness check-in state"""
 
-    drinkType: str | None = None
-    size: str | None = None
-    milk: str | None = None
-    extras: list[str] = field(default_factory=list)
-    name: str | None = None
+    mood: str | None = None
+    energy: str | None = None
+    objectives: list[str] = field(default_factory=list)
+    summary: str | None = None
+    timestamp: str | None = None
 
 
 class Assistant(Agent):
     def __init__(self) -> None:
+        # Load previous check-ins to provide context
+        previous_context = self._load_previous_checkins()
+        
         super().__init__(
-            instructions="""You are a friendly barista at Murf Coffee Shop taking voice orders.
-            Ask for: drink type, size, milk type, extras, and customer name.
-            Use the tools to record each answer. Thank them by name when done.""",
+            instructions=f"""You are a supportive Health & Wellness Voice Companion.
+            
+            Your role:
+            - Conduct a friendly daily check-in about mood, energy, and daily intentions
+            - Offer simple, realistic, non-medical advice
+            - Be warm, encouraging, and non-judgmental
+            - Keep conversations natural and conversational
+            
+            Conversation flow:
+            1. Greet the user warmly
+            2. Ask about their mood and how they're feeling today
+            3. Ask about their energy level
+            4. Ask what 1-3 things they'd like to accomplish today
+            5. Offer simple, actionable advice or reflections
+            6. Recap their mood and objectives
+            7. Ask "Does this sound right?" to confirm
+            
+            Important guidelines:
+            - NO medical diagnosis or clinical advice
+            - Keep suggestions small, practical, and grounded
+            - Examples: take breaks, go for a walk, break tasks into steps
+            - Be supportive but realistic
+            
+            {previous_context}
+            
+            Use the tools to record mood, energy, and objectives as the conversation progresses.""",
         )
 
-    @function_tool
-    async def record_drink(self, context: RunContext[CoffeeOrder], drink: str) -> str:
-        """Record drink type"""
-        context.userdata.drinkType = drink
-        return self._check_complete(context)
+    def _load_previous_checkins(self) -> str:
+        """Load previous check-ins from JSON file"""
+        try:
+            with open("wellness_log.json", "r") as f:
+                data = json.load(f)
+                sessions = data.get("sessions", [])
+                if sessions:
+                    last_session = sessions[-1]
+                    return f"""Previous check-in context:
+                    Last time (on {last_session.get('timestamp', 'recently')}), the user mentioned:
+                    - Mood: {last_session.get('mood', 'not specified')}
+                    - Energy: {last_session.get('energy', 'not specified')}
+                    - Objectives: {', '.join(last_session.get('objectives', []))}
+                    
+                    Reference this naturally in conversation, like: 'Last time we talked, you mentioned {last_session.get('mood', 'feeling tired')}. How does today compare?'
+                    """
+        except FileNotFoundError:
+            return "This is the user's first check-in. Welcome them warmly!"
+        except json.JSONDecodeError:
+            return "This is the user's first check-in. Welcome them warmly!"
+        return ""
 
     @function_tool
-    async def record_size(self, context: RunContext[CoffeeOrder], size: str) -> str:
-        """Record size"""
-        context.userdata.size = size
-        return self._check_complete(context)
+    async def record_mood(self, context: RunContext[WellnessCheckIn], mood: str) -> str:
+        """Record the user's current mood or how they're feeling
+        
+        Args:
+            mood: Description of the user's mood (e.g., 'tired but motivated', 'energetic', 'stressed')
+        """
+        context.userdata.mood = mood
+        logger.info(f"Recorded mood: {mood}")
+        return "Got it, thanks for sharing!"
 
     @function_tool
-    async def record_milk(self, context: RunContext[CoffeeOrder], milk: str) -> str:
-        """Record milk type"""
-        context.userdata.milk = milk
-        return self._check_complete(context)
+    async def record_energy(self, context: RunContext[WellnessCheckIn], energy: str) -> str:
+        """Record the user's energy level
+        
+        Args:
+            energy: Description of energy level (e.g., 'high', 'medium', 'low', 'drained')
+        """
+        context.userdata.energy = energy
+        logger.info(f"Recorded energy: {energy}")
+        return "Understood!"
 
     @function_tool
-    async def record_extras(self, context: RunContext[CoffeeOrder], extras: str) -> str:
-        """Record extras"""
-        if extras.lower() != "none":
-            context.userdata.extras = [e.strip() for e in extras.split(",")]
+    async def record_objectives(self, context: RunContext[WellnessCheckIn], objectives: str) -> str:
+        """Record the user's daily objectives or goals
+        
+        Args:
+            objectives: Comma-separated list of 1-3 things the user wants to accomplish today
+        """
+        context.userdata.objectives = [obj.strip() for obj in objectives.split(",")]
+        logger.info(f"Recorded objectives: {context.userdata.objectives}")
         return self._check_complete(context)
 
-    @function_tool
-    async def record_name(self, context: RunContext[CoffeeOrder], name: str) -> str:
-        """Record customer name"""
-        context.userdata.name = name
-        return self._check_complete(context)
-
-    def _check_complete(self, context: RunContext[CoffeeOrder]) -> str:
-        order = context.userdata
-        if all([order.drinkType, order.size, order.milk, order.name]):
-            with open("orders.json", "a") as f:
-                json.dump(asdict(order), f)
-                f.write("\n")
-            return f"Perfect! Your {order.size} {order.drinkType} with {order.milk} is ready. Thank you, {order.name}!"
+    def _check_complete(self, context: RunContext[WellnessCheckIn]) -> str:
+        """Check if check-in is complete and save to JSON"""
+        checkin = context.userdata
+        if all([checkin.mood, checkin.energy, checkin.objectives]):
+            # Add timestamp
+            from datetime import datetime
+            checkin.timestamp = datetime.now().isoformat()
+            
+            # Create summary
+            checkin.summary = f"User is feeling {checkin.mood} with {checkin.energy} energy. Goals: {', '.join(checkin.objectives)}"
+            
+            # Save to JSON
+            self._save_checkin(checkin)
+            
+            return f"""Perfect! Let me recap:
+            - Mood: {checkin.mood}
+            - Energy: {checkin.energy}
+            - Today's objectives: {', '.join(checkin.objectives)}
+            
+            Does this sound right?"""
         return "Got it!"
-
-    # To add tools, use the @function_tool decorator.
-    # Here's an example that adds a simple weather tool.
-    # You also have to add `from livekit.agents import function_tool, RunContext` to the top of this file
-    # @function_tool
-    # async def lookup_weather(self, context: RunContext, location: str):
-    #     """Use this tool to look up current weather information in the given location.
-    #
-    #     If the location is not supported by the weather service, the tool will indicate this. You must tell the user the location's weather is unavailable.
-    #
-    #     Args:
-    #         location: The location to look up weather information for (e.g. city name)
-    #     """
-    #
-    #     logger.info(f"Looking up weather for {location}")
-    #
-    #     return "sunny with a temperature of 70 degrees."
+    
+    def _save_checkin(self, checkin: WellnessCheckIn):
+        """Save check-in to wellness_log.json"""
+        try:
+            # Load existing data
+            try:
+                with open("wellness_log.json", "r") as f:
+                    data = json.load(f)
+            except (FileNotFoundError, json.JSONDecodeError):
+                data = {"sessions": []}
+            
+            # Append new session
+            data["sessions"].append(asdict(checkin))
+            
+            # Save back to file
+            with open("wellness_log.json", "w") as f:
+                json.dump(data, f, indent=2)
+            
+            logger.info(f"Saved check-in to wellness_log.json")
+        except Exception as e:
+            logger.error(f"Error saving check-in: {e}")
 
 
 def prewarm(proc: JobProcess):
@@ -114,8 +181,8 @@ async def entrypoint(ctx: JobContext):
     }
 
     # Set up a voice AI pipeline using OpenAI, Cartesia, AssemblyAI, and the LiveKit turn detector
-    session = AgentSession[CoffeeOrder](
-        userdata=CoffeeOrder(),
+    session = AgentSession[WellnessCheckIn](
+        userdata=WellnessCheckIn(),
         # Speech-to-text (STT) is your agent's ears, turning the user's speech into text that the LLM can understand
         # See all available models at https://docs.livekit.io/agents/models/stt/
         stt=deepgram.STT(model="nova-3"),
