@@ -1,0 +1,62 @@
+[
+    {
+        "id": "variables",
+        "title": "Variables",
+        "summary": "Variables are containers that store data values in programming. Think of them as labeled boxes where you can put information and retrieve it later. For example, you might store a user's name in a variable called 'username' or store a number in a variable called 'age'. Variables make your code reusable and flexible because you can change the value without rewriting your entire program.",
+        "sample_question": "What is a variable and why is it useful in programming?"
+    },
+    {
+        "id": "loops",
+        "title": "Loops",
+        "summary": "Loops are programming constructs that let you repeat a block of code multiple times without writing it over and over. There are two main types: 'for loops' which repeat a specific number of times, and 'while loops' which repeat as long as a condition is true. For example, if you want to print numbers 1 to 10, you'd use a for loop instead of writing 10 separate print statements.",
+        "sample_question": "Explain the difference between a for loop and a while loop."
+    },
+    {
+        "id": "functions",
+        "title": "Functions",
+        "summary": "Functions are reusable blocks of code that perform a specific task. They help organize your code and avoid repetition. A function can take inputs (called parameters), process them, and return an output. For example, you might create a function called 'calculate_area' that takes length and width as inputs and returns the area of a rectangle.",
+        "sample_question": "What is a function and how does it help organize code?"
+    },
+    {
+        "id": "conditionals",
+        "title": "Conditionals",
+        "summary": "Conditionals are statements that allow your program to make decisions based on certain conditions. The most common is the 'if-else' statement. For example, if a user's age is over 18, show adult content, else show kid-friendly content. Conditionals make your programs dynamic and responsive to different situations.",
+        "sample_question": "How do if-else statements help programs make decisions?"
+    },
+    {
+        "id": "arrays",
+        "title": "Arrays and Lists",
+        "summary": "Arrays or lists are data structures that store multiple values in a single variable. Instead of creating separate variables for each item, you can store them all in one list. For example, instead of having 'student1', 'student2', 'student3', you can have a single 'students' list containing all names. You can access items by their position (index) and easily add or remove items.",
+        "sample_question": "What is an array and why would you use it instead of individual variables?"
+    },
+    {
+        "id": "objects",
+        "title": "Objects and Classes",
+        "summary": "Objects are collections of related data and functions bundled together. A class is like a blueprint for creating objects. For example, a 'Car' class might have properties like color, brand, and speed, and methods like start, stop, and accelerate. Objects help organize complex programs by grouping related information and behaviors together.",
+        "sample_question": "Explain the relationship between classes and objects with an example."
+    },
+    {
+        "id": "strings",
+        "title": "Strings",
+        "summary": "Strings are sequences of characters used to represent text in programming. They can contain letters, numbers, symbols, and spaces. You can manipulate strings in many ways: combine them, split them, search within them, or change their case. For example, you might combine a first name and last name to create a full name, or convert user input to lowercase for comparison.",
+        "sample_question": "What is a string and what are some common operations you can perform on strings?"
+    },
+    {
+        "id": "data_types",
+        "title": "Data Types",
+        "summary": "Data types define what kind of value a variable can hold. Common types include integers (whole numbers), floats (decimal numbers), strings (text), booleans (true/false), and more. Understanding data types is important because different operations work with different types. For example, you can add numbers together, but adding a number to text might cause an error or unexpected behavior.",
+        "sample_question": "Why are data types important in programming? Give examples of different data types."
+    },
+    {
+        "id": "recursion",
+        "title": "Recursion",
+        "summary": "Recursion is when a function calls itself to solve a problem by breaking it into smaller, similar sub-problems. Each recursive call works on a smaller piece until reaching a base case that stops the recursion. A classic example is calculating factorial: factorial of 5 is 5 times factorial of 4, which is 4 times factorial of 3, and so on, until you reach factorial of 1 which is just 1.",
+        "sample_question": "What is recursion and how does it differ from using a loop?"
+    },
+    {
+        "id": "error_handling",
+        "title": "Error Handling",
+        "summary": "Error handling is the process of anticipating and managing errors that might occur during program execution. Using try-catch blocks (or try-except in Python), you can catch errors and handle them gracefully instead of letting your program crash. For example, if a user enters text when you expect a number, you can catch that error and ask them to try again instead of the program crashing.",
+        "sample_question": "Why is error handling important and how do try-catch blocks work?"
+    }
+]
